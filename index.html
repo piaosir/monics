@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEO卫星数字频谱分析仪</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>频谱分析</h1>
+            <small>地球同步卫星数字频谱分析仪</small>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#" class="active" id="spectrumView">频谱</a></li>
+                <li><a href="#" id="waterfallView">瀑布图</a></li>
+                <li><a href="#" id="constellationView">星座图</a></li>
+                <li><a href="#" id="interferenceView">干扰分析</a></li>
+                <li><a href="#" id="settingsView">设置</a></li>
+            </ul>
+        </nav>
+        <div class="status">
+            <span id="connectionStatus" class="connected">已连接</span>
+            <span id="deviceInfo">AD9361 | 250MHz 带宽</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="control-group">
+                <h3>频率控制</h3>
+                <div class="control">
+                    <label for="centerFreq">中心频率 (MHz):</label>
+                    <input type="number" id="centerFreq" value="1500" step="0.1" min="30" max="6000">
+                </div>
+                <div class="control">
+                    <label for="spanFreq">频宽 (MHz):</label>
+                    <select id="spanFreq">
+                        <option value="custom">自定义...</option>
+                        <option value="10">10 MHz</option>
+                        <option value="25">25 MHz</option>
+                        <option value="50">50 MHz</option>
+                        <option value="100">100 MHz</option>
+                        <option value="250" selected>250 MHz</option>
+                        <option value="500">500 MHz</option>
+                    </select>
+                </div>
+                <div class="control" id="customSpanControl" style="display: none;">
+                    <label for="customSpan">自定义频宽 (MHz):</label>
+                    <input type="number" id="customSpan" min="1" max="500" step="0.1" value="250">
+                </div>
+                <div class="control">
+                    <label for="rbwSelect">分辨带宽 (RBW):</label>
+                    <select id="rbwSelect">
+                        <option value="auto" selected>自动</option>
+                        <option value="1">1 kHz</option>
+                        <option value="3">3 kHz</option>
+                        <option value="10">10 kHz</option>
+                        <option value="30">30 kHz</option>
+                        <option value="100">100 kHz</option>
+                        <option value="300">300 kHz</option>
+                        <option value="1000">1000 kHz</option>
+                        <option value="custom">自定义...</option>
+                    </select>
+                </div>
+                <div class="control" id="customRbwControl" style="display: none;">
+                    <label for="customRbw">自定义RBW (kHz):</label>
+                    <input type="number" id="customRbw" min="0.1" max="5000" step="0.1" value="10">
+                </div>
+                <div class="control">
+                    <label for="vbwSelect">视频带宽 (VBW):</label>
+                    <select id="vbwSelect">
+                        <option value="auto" selected>自动</option>
+                        <option value="1">1 kHz</option>
+                        <option value="3">3 kHz</option>
+                        <option value="10">10 kHz</option>
+                        <option value="30">30 kHz</option>
+                        <option value="100">100 kHz</option>
+                        <option value="300">300 kHz</option>
+                        <option value="1000">1000 kHz</option>
+                        <option value="custom">自定义...</option>
+                    </select>
+                </div>
+                <div class="control" id="customVbwControl" style="display: none;">
+                    <label for="customVbw">自定义VBW (kHz):</label>
+                    <input type="number" id="customVbw" min="0.1" max="5000" step="0.1" value="10">
+                </div>
+                <div class="control">
+                    <label for="vbwRbwRatio">VBW/RBW比例:</label>
+                    <select id="vbwRbwRatio">
+                        <option value="0.1">1:10</option>
+                        <option value="0.3">1:3</option>
+                        <option value="1" selected>1:1</option>
+                        <option value="3">3:1</option>
+                        <option value="10">10:1</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>显示设置</h3>
+                <div class="control">
+                    <label for="displayMode">显示模式:</label>
+                    <select id="displayMode">
+                        <option value="normal" selected>正常</option>
+                        <option value="max-hold">最大保持</option>
+                        <option value="average">平均</option>
+                        <option value="min-max">最小/最大</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="dynamicRange">动态范围 (dB):</label>
+                    <input type="number" id="dynamicRange" value="70" min="40" max="100" step="5">
+                </div>
+                <div class="control">
+                    <label for="referenceLevel">参考电平 (dBm):</label>
+                    <input type="number" id="referenceLevel" value="0" min="-120" max="30" step="5">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>分析工具</h3>
+                <div class="control">
+                    <button id="carrierBtn" class="analysis-btn">
+                        <i class="fas fa-satellite-dish"></i> 载波分析
+                    </button>
+                </div>
+                <div class="control">
+                    <button id="interferenceBtn" class="analysis-btn">
+                        <i class="fas fa-exclamation-triangle"></i> 干扰检测
+                    </button>
+                </div>
+                <div class="control">
+                    <button id="modulationBtn" class="analysis-btn">
+                        <i class="fas fa-wave-square"></i> 调制分析
+                    </button>
+                </div>
+                <div class="control">
+                    <button id="recordBtn" class="analysis-btn">
+                        <i class="fas fa-record-vinyl"></i> 记录IQ数据
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>设备设置</h3>
+                <div class="control">
+                    <label for="sampleRate">采样率 (MSPS):</label>
+                    <select id="sampleRate">
+                        <option value="61.44">61.44</option>
+                        <option value="122.88">122.88</option>
+                        <option value="245.76" selected>245.76</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="gainMode">增益模式:</label>
+                    <select id="gainMode">
+                        <option value="auto" selected>自动</option>
+                        <option value="manual">手动</option>
+                        <option value="fast">快速响应</option>
+                        <option value="slow">慢速响应</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="gainValue">增益值 (dB):</label>
+                    <input type="range" id="gainValue" min="0" max="70" value="50" step="1">
+                    <span id="gainValueDisplay">50 dB</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>标记</h3>
+                <div class="marker-controls">
+                    <button id="addMarkerBtn" class="small-btn">添加标记</button>
+                    <button id="peakSearchBtn" class="small-btn">峰值搜索</button>
+                    <button id="clearMarkersBtn" class="small-btn">清除所有</button>
+                </div>
+                <div id="markerList" class="marker-list">
+                    <!-- 标记将在这里动态添加 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="display-container">
+            <div id="spectrum-display" class="display active">
+                <canvas id="spectrumCanvas"></canvas>
+                <div class="axis x-axis"></div>
+                <div class="axis y-axis"></div>
+            </div>
+
+            <div id="waterfall-display" class="display">
+                <canvas id="waterfallCanvas"></canvas>
+                <div class="axis x-axis"></div>
+            </div>
+
+            <div id="constellation-display" class="display">
+                <canvas id="constellationCanvas"></canvas>
+            </div>
+
+            <div id="interference-display" class="display">
+                <canvas id="interferenceCanvas"></canvas>
+                <div id="interferenceData"></div>
+            </div>
+
+            <div id="settings-display" class="display">
+                <div class="settings-form">
+                    <h2>高级设置</h2>
+                    <div class="settings-group">
+                        <h3>连接配置</h3>
+                        <div class="setting">
+                            <label for="deviceType">设备类型:</label>
+                            <select id="deviceType">
+                                <option value="AD9361" selected>AD9361</option>
+                                <option value="AD9363">AD9363</option>
+                                <option value="AD9364">AD9364</option>
+                                <option value="AD9371">AD9371</option>
+                                <optgroup label="国产设备">
+                                    <option value="GE7800">中科芯源-GE7800</option>
+                                    <option value="TA8030">天奥电子-TA8030</option>
+                                    <option value="HT8200">航天宏图-HT8200</option>
+                                    <option value="HL8600">海联讯达-HL8600</option>
+                                    <option value="HD9010">中电华大-HD9010</option>
+                                    <option value="FM3250">复旦微电子-FM3250</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="setting">
+                            <label for="connectionMethod">连接方式:</label>
+                            <select id="connectionMethod">
+                                <option value="api">API/WebSocket</option>
+                                <option value="tcp" selected>TCP直连</option>
+                                <option value="udp">UDP</option>
+                                <option value="usb">USB</option>
+                            </select>
+                        </div>
+                        <div id="apiSettings" class="connection-settings" style="display: none;">
+                            <div class="setting">
+                                <label for="apiEndpoint">API 端点:</label>
+                                <input type="text" id="apiEndpoint" value="http://localhost:3000/api/device">
+                            </div>
+                            <div class="setting">
+                                <label for="websocketEndpoint">WebSocket 端点:</label>
+                                <input type="text" id="websocketEndpoint" value="ws://localhost:3000/ws">
+                            </div>
+                        </div>
+                        <div id="tcpSettings" class="connection-settings">
+                            <div class="setting">
+                                <label for="tcpServer">TCP 服务器地址:</label>
+                                <input type="text" id="tcpServer" value="192.168.1.100">
+                            </div>
+                            <div class="setting">
+                                <label for="tcpPort">TCP 端口:</label>
+                                <input type="number" id="tcpPort" value="7800">
+                            </div>
+                            <div class="setting">
+                                <label for="tcpFormat">数据格式:</label>
+                                <select id="tcpFormat">
+                                    <option value="int8">8位整数</option>
+                                    <option value="int16" selected>16位整数</option>
+                                    <option value="float32">32位浮点数</option>
+                                </select>
+                            </div>
+                            <div class="setting">
+                                <label for="tcpEndianness">字节序:</label>
+                                <select id="tcpEndianness">
+                                    <option value="little" selected>小端序</option>
+                                    <option value="big">大端序</option>
+                                </select>
+                            </div>
+                            <div class="setting">
+                                <label for="tcpProtocol">协议格式:</label>
+                                <select id="tcpProtocol">
+                                    <option value="standard" selected>标准协议</option>
+                                    <option value="ge7800">GE7800专用协议</option>
+                                    <option value="ta8030">TA8030专用协议</option>
+                                    <option value="ht8200">HT8200专用协议</option>
+                                    <option value="custom">自定义协议</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="udpSettings" class="connection-settings" style="display: none;">
+                            <div class="setting">
+                                <label for="udpServer">UDP 服务器地址:</label>
+                                <input type="text" id="udpServer" value="192.168.1.100">
+                            </div>
+                            <div class="setting">
+                                <label for="udpPort">UDP 端口:</label>
+                                <input type="number" id="udpPort" value="7800">
+                            </div>
+                            <div class="setting">
+                                <label for="udpFormat">数据格式:</label>
+                                <select id="udpFormat">
+                                    <option value="int8">8位整数</option>
+                                    <option value="int16" selected>16位整数</option>
+                                    <option value="float32">32位浮点数</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="usbSettings" class="connection-settings" style="display: none;">
+                            <div class="setting">
+                                <label for="usbVendorId">USB厂商ID:</label>
+                                <input type="text" id="usbVendorId" placeholder="例如: 0x04b4">
+                            </div>
+                            <div class="setting">
+                                <label for="usbProductId">USB产品ID:</label>
+                                <input type="text" id="usbProductId" placeholder="例如: 0x00f1">
+                            </div>
+                        </div>
+                        <div class="connection-status-panel">
+                            <div class="status-indicator">
+                                <span class="status-dot" id="connectionStatusDot"></span>
+                                <span class="status-text" id="connectionStatusText">未连接</span>
+                            </div>
+                            <div class="connection-info" id="connectionInfo">
+                                <span>请配置连接参数并点击连接按钮</span>
+                            </div>
+                        </div>
+                        <div class="connection-actions">
+                            <button id="testConnectionBtn" class="settings-btn secondary-btn">测试连接</button>
+                            <button id="connectBtn" class="settings-btn">连接</button>
+                            <button id="disconnectBtn" class="settings-btn danger-btn" disabled>断开</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>FFT 配置</h3>
+                        <div class="setting">
+                            <label for="fftSize">FFT 大小:</label>
+                            <select id="fftSize">
+                                <option value="1024">1024 点</option>
+                                <option value="2048">2048 点</option>
+                                <option value="4096" selected>4096 点</option>
+                                <option value="8192">8192 点</option>
+                                <option value="16384">16384 点</option>
+                            </select>
+                        </div>
+                        <div class="setting">
+                            <label for="windowType">窗函数:</label>
+                            <select id="windowType">
+                                <option value="rectangular">矩形窗</option>
+                                <option value="hann" selected>汉宁窗</option>
+                                <option value="hamming">汉明窗</option>
+                                <option value="blackman">布莱克曼窗</option>
+                                <option value="flattop">平顶窗</option>
+                            </select>
+                        </div>
+                        <div class="setting">
+                            <label for="averagingType">平均类型:</label>
+                            <select id="averagingType">
+                                <option value="none">无</option>
+                                <option value="rms" selected>均方根</option>
+                                <option value="peak">峰值</option>
+                                <option value="vector">矢量</option>
+                            </select>
+                        </div>
+                        <div class="setting">
+                            <label for="averagingCount">平均次数:</label>
+                            <input type="number" id="averagingCount" value="10" min="1" max="100">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>数据导出</h3>
+                        <div class="setting">
+                            <label for="exportFormat">导出格式:</label>
+                            <select id="exportFormat">
+                                <option value="csv" selected>CSV</option>
+                                <option value="json">JSON</option>
+                                <option value="binary">二进制(IQ数据)</option>
+                                <option value="raw_iq">原始IQ</option>
+                            </select>
+                        </div>
+                        <button id="exportBtn" class="settings-btn">导出数据</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="measurement-panel">
+            <div class="measurement">
+                <span class="label">中心:</span>
+                <span class="value" id="centerFreqDisplay">1500.000 MHz</span>
+            </div>
+            <div class="measurement">
+                <span class="label">频宽:</span>
+                <span class="value" id="spanFreqDisplay">250.000 MHz</span>
+            </div>
+            <div class="measurement">
+                <span class="label">RBW:</span>
+                <span class="value" id="rbwDisplay">10.000 kHz</span>
+            </div>
+            <div class="measurement">
+                <span class="label">VBW:</span>
+                <span class="value" id="vbwDisplay">10.000 kHz</span>
+            </div>
+            <div class="measurement">
+                <span class="label">信噪比:</span>
+                <span class="value" id="snrDisplay">32.5 dB</span>
+            </div>
+            <div class="measurement">
+                <span class="label">Es/N0:</span>
+                <span class="value" id="esn0Display">12.3 dB</span>
+            </div>
+            <div class="measurement">
+                <span class="label">载噪比:</span>
+                <span class="value" id="cnDisplay">15.7 dB</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">模态框标题</h2>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- 依赖库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fftjs/0.0.4/fft.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webdsp@0.0.11/lib/webdsp.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.14.0.min.js"></script>
+
+    <!-- 应用脚本 -->
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/tcp-client.js"></script>
+    <script src="js/dsp.js"></script>
+    <script src="js/device.js"></script>
+    <script src="js/spectrum-display.js"></script>
+    <script src="js/waterfall-display.js"></script>
+    <script src="js/constellation-display.js"></script>
+    <script src="js/interference-analyzer.js"></script>
+    <script src="js/carrier-analyzer.js"></script>
+    <script src="js/modulation-analyzer.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
